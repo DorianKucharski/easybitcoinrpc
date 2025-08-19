@@ -1,6 +1,6 @@
 # Easy Bitcoin RPC
 
-Easy Bitcoin RPC is a simple and easy to use Python library for Bitcoin RPC
+Easy Bitcoin RPC is a simple, easy-to-use Python library for working with Bitcoin Core’s JSON-RPC interface.
 
 ## Installation
 
@@ -17,7 +17,7 @@ pip install easybitcoinrpc
 ```python
 from easybitcoinrpc import RPC
 
-# RPC() returns connection object
+# RPC() returns a connection object
 
 rpc = RPC() # defaults: ip=127.0.0.1, port="8332", user="user", password="password", wallet=None
 
@@ -29,11 +29,11 @@ rpc = RPC(wallet="Wallet")
 
 ```
 
-Specifing wallet when connection is made is prefered method to get access to wallet, loading wallet after connecting sometimes dosn't work.
+Specifying the wallet when creating the connection is the preferred way to access a wallet—loading the wallet after connecting sometimes doesn't work.
 
 ### RPC methods
 
-RPC object has methods for all Bitcoins RPC calls and those methods are seperated into sections as on [Bitcoin RPC API Reference](https://developer.bitcoin.org/reference/rpc/)
+The RPC object exposes methods for all of Bitcoin's RPC calls, and these methods are separated into the same sections as in the [Bitcoin RPC API Reference](https://developer.bitcoin.org/reference/rpc/)
 
 
 ```python
@@ -49,7 +49,7 @@ rpc.generating # returns object which has all methods from generating category
 rpc.control # returns object which has all methods from control category
 rpc.transactions # returns object which has all methods from transactions category
 
-rpc.batch(["getbestblockhash"]) # batch method also can be used to made requests
+rpc.batch(["getbestblockhash"]) # you can also use the batch method to make requests
 rpc.batch(["getblock", 1000]) # parameters are passed in list, where first parameter is RPC command
 ```
 
@@ -57,7 +57,7 @@ All methods have documentation copied from [Bitcoin RPC API Reference](https://d
 they also have parameters specified with their types and their default values.
 
 ### Data
-Methods which implements blocks and transactions related calls, returns custom data objects like Block, Transaction, Vin, ScriptSig and etc.
+Methods that implement block- and transaction-related calls return convenient data objects such as Block, Transaction, Vin, and ScriptSig.
 
 ```python
 from easybitcoinrpc import RPC
@@ -101,7 +101,7 @@ for t in block.get_transactions():
             print(t.get_txid(), v.get_sequence(), v.get_script_sig().get_r())
 ```
 
-Objects have overridden str methods for better visualisation of data.
+These objects override __str__ for nicer, human-readable output.
 
 ```python
 from easybitcoinrpc import RPC
@@ -130,7 +130,7 @@ print(block)
 # previousblockhash: 00000000000000000004c1761fcc1799f11362dfdcfa3ad4ff4dbb2557dda85a
 ```
 
-Transaction object has TransactionSummary object for presenting transaction like on blockchain.com.
+Each Transaction object includes a TransactionSummary helper for presenting the data in a format similar to blockchain.com.
 ```python
 from easybitcoinrpc import RPC
 rpc = RPC()
