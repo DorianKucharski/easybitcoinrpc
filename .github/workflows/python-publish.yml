@@ -11,6 +11,10 @@ name: Upload Python Package
 on:
   release:
     types: [published]
+  # A manual run builds and checks the distributions without publishing them,
+  # which is the way to exercise this workflow without spending a version on
+  # PyPI, where an uploaded version can never be replaced.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,11 +30,26 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Check that the release tag matches the project version
+        if: github.event_name == 'release'
+        run: |
+          version=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          tag=${GITHUB_REF_NAME#v}
+          if [ "$version" != "$tag" ]; then
+            echo "pyproject.toml declares $version but the tag is $tag" >&2
+            exit 1
+          fi
+
       - name: Build release distributions
         run: |
           # NOTE: put your own distribution build steps here.
           python -m pip install build
           python -m build
+
+      - name: Check release distributions
+        run: |
+          python -m pip install twine
+          python -m twine check dist/*
 
       - name: Upload distributions
         uses: actions/upload-artifact@v4
@@ -40,6 +59,8 @@ jobs:
 
   pypi-publish:
     runs-on: ubuntu-latest
+    # Only a published release reaches PyPI; a manual run stops after the build.
+    if: github.event_name == 'release'
     needs:
       - release-build
     permissions:
