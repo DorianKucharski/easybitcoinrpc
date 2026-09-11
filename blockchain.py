@@ -1,5 +1,61 @@
 from easybitcoinrpc.data import Block, Transaction
-from bitcoinrpc.authproxy import AuthServiceProxy
+from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
+
+
+def verbosity_argument(verbosity):
+    """
+    Translates a verbosity level into the argument getblock expects.
+
+    Bitcoin Core older than 0.15 (and the forks derived from it) declare the second argument of
+    getblock as a boolean verbose flag, so an integer is rejected with
+    "-1: JSON value is not a boolean as expected". Newer versions accept a boolean as well as an
+    integer, therefore levels 0 and 1 are always sent as booleans and only level 2 and above,
+    which cannot be expressed as a boolean, is sent as an integer.
+
+    Parameters
+    -------
+    verbosity : int or bool or None
+        The requested verbosity level
+
+    Returns
+    -------
+    bool or int or None
+        The argument to pass to getblock
+    """
+    if verbosity is None or type(verbosity) == bool:
+        return verbosity
+    if verbosity == 0:
+        return False
+    if verbosity == 1:
+        return True
+    return verbosity
+
+
+def unsupported_verbosity(error, verbosity):
+    """
+    Replaces the error a node without verbosity support raises with an explanatory one.
+
+    Parameters
+    -------
+    error : JSONRPCException
+        The error raised by the node
+
+    verbosity : int or bool or None
+        The requested verbosity level
+
+    Returns
+    -------
+    JSONRPCException
+        The error to raise
+    """
+    if type(verbosity) != bool and verbosity is not None and verbosity > 1 \
+            and "boolean" in str(error):
+        return JSONRPCException({
+            "code": -1,
+            "message": "verbosity %s requires Bitcoin Core 0.15 or newer, "
+                       "this node only supports verbosity 0 and 1" % verbosity
+        })
+    return error
 
 
 class Blockchain:
@@ -50,7 +106,10 @@ class Blockchain:
         """
         if type(height_or_hash) == int:
             height_or_hash = self.__rpc.batch(["getblockhash", height_or_hash])
-        block = self.__rpc.batch(["getblock", height_or_hash, verbosity])
+        try:
+            block = self.__rpc.batch(["getblock", height_or_hash, verbosity_argument(verbosity)])
+        except JSONRPCException as error:
+            raise unsupported_verbosity(error, verbosity)
         if verbosity is None or verbosity == 1:
             return Block(self.__rpc, block)
         elif verbosity == 2:
@@ -74,7 +133,7 @@ class Blockchain:
         """
         if type(height_or_hash) == int:
             height_or_hash = self.__rpc.batch(["getblockhash", height_or_hash])
-        return self.__rpc.batch(["getblock", height_or_hash, 0])
+        return self.__rpc.batch(["getblock", height_or_hash, False])
 
     def get_blockchain_info(self) -> dict:
         """
