@@ -5,3 +5,7 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+
+# virtual environments, including the one "uv sync" creates
+.venv/
+venv/
