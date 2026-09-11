@@ -1,2 +1,11 @@
 __pycache__/
 *.py[cod]
+
+# build artifacts produced by "python -m build"
+build/
+dist/
+*.egg-info/
+
+# virtual environments, including the one "uv sync" creates
+.venv/
+venv/

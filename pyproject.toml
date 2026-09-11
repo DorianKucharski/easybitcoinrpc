@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "easybitcoinrpc"
+version = "1.1.1"
+description = "Simple and easy to use library for Bitcoin RPC"
+readme = "README.md"
+requires-python = ">=3.6"
+license = { file = "LICENSE" }
+authors = [{ name = "Dorian Kucharski", email = "dorian.kucharski1@gmail.com" }]
+dependencies = [
+    "python-bitcoinrpc",
+    "cryptocompare",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/DorianKucharski/easybitcoinrpc"
+
+# Tooling for developing and releasing the library, installed by "uv sync" but kept out of the
+# published package, which only declares the dependencies above.
+[dependency-groups]
+dev = [
+    "pytest",
+    "build",
+    "twine",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# The package modules live in the repository root, so the root is mapped onto the
+# easybitcoinrpc package instead of being scanned for sub-packages.
+[tool.setuptools]
+packages = ["easybitcoinrpc"]
+
+[tool.setuptools.package-dir]
+easybitcoinrpc = "."
