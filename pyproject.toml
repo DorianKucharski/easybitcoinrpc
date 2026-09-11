@@ -23,6 +23,18 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/DorianKucharski/easybitcoinrpc"
 
+# Tooling for developing and releasing the library, installed by "uv sync" but kept out of the
+# published package, which only declares the dependencies above.
+[dependency-groups]
+dev = [
+    "pytest",
+    "build",
+    "twine",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 # The package modules live in the repository root, so the root is mapped onto the
 # easybitcoinrpc package instead of being scanned for sub-packages.
 [tool.setuptools]
