@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
@@ -27,5 +27,8 @@ jobs:
       - name: Install the project and its dev group
         run: uv sync --frozen --python ${{ matrix.python-version }}
 
+      - name: Check the type annotations
+        run: uv run --frozen mypy
+
       - name: Run the tests
-        run: uv run --frozen pytest -q
+        run: uv run --frozen python -m unittest discover -s tests -t tests

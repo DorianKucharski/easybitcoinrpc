@@ -1,5 +1,11 @@
-from bitcoinrpc.authproxy import AuthServiceProxy
+from __future__ import annotations
+
+from dataclasses import dataclass
+from functools import cached_property
+from types import TracebackType
+
 from easybitcoinrpc.blockchain import Blockchain
+from easybitcoinrpc.client import DEFAULT_TIMEOUT_SECONDS, JsonRpcClient, NodeEndpoint
 from easybitcoinrpc.control import Control
 from easybitcoinrpc.generating import Generating
 from easybitcoinrpc.mining import Mining
@@ -9,24 +15,66 @@ from easybitcoinrpc.util import Util
 from easybitcoinrpc.wallet import Wallet
 
 
+@dataclass(frozen=True)
 class RPC:
-    def __init__(self, ip='127.0.0.1', port='8332', user='user', password='password', wallet=None):
-        port = str(port)
-        if wallet:
-            self.__url = 'http://%s:%s@%s:%s/wallet/%s' % (user, password, ip, port, wallet)
-        else:
-            self.__url = 'http://%s:%s@%s:%s' % (user, password, ip, port)
+    ip: str = "127.0.0.1"
+    port: int = 8332
+    user: str = "user"
+    password: str = "password"
+    wallet_name: str | None = None
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
 
-        self.__rpc = AuthServiceProxy(self.__url)
+    @cached_property
+    def client(self) -> JsonRpcClient:
+        endpoint = NodeEndpoint(self.ip, int(self.port), self.user, self.password, self.wallet_name)
+        return JsonRpcClient(endpoint, self.timeout_seconds)
 
-        self.blockchain = Blockchain(self)
-        self.control = Control(self)
-        self.generating = Generating(self)
-        self.mining = Mining(self)
-        self.network = Network(self)
-        self.transactions = RawTransactions(self)
-        self.util = Util(self)
-        self.wallet = Wallet(self)
+    @cached_property
+    def blockchain(self) -> Blockchain:
+        return Blockchain(self.client)
 
-    def batch(self, command):
-        return self.__rpc.batch_([command])[0]
+    @cached_property
+    def control(self) -> Control:
+        return Control(self.client)
+
+    @cached_property
+    def generating(self) -> Generating:
+        return Generating(self.client)
+
+    @cached_property
+    def mining(self) -> Mining:
+        return Mining(self.client)
+
+    @cached_property
+    def network(self) -> Network:
+        return Network(self.client)
+
+    @cached_property
+    def transactions(self) -> RawTransactions:
+        return RawTransactions(self.client)
+
+    @cached_property
+    def util(self) -> Util:
+        return Util(self.client)
+
+    @cached_property
+    def wallet(self) -> Wallet:
+        return Wallet(self.client)
+
+    def for_wallet(self, wallet_name: str | None) -> RPC:
+        return RPC(self.ip, self.port, self.user, self.password, wallet_name, self.timeout_seconds)
+
+    def close(self) -> None:
+        if "client" in self.__dict__:
+            self.client.close()
+
+    def __enter__(self) -> RPC:
+        return self
+
+    def __exit__(
+        self,
+        exception_type: type[BaseException] | None,
+        exception: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self.close()

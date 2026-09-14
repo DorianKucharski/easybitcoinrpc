@@ -1,6 +1,12 @@
+from __future__ import annotations
+
+from typing import Any
+
+from easybitcoinrpc.client import JsonRpcClient
+
 class Network:
-    def __init__(self, rpc):
-        self.__rpc = rpc
+    def __init__(self, client: JsonRpcClient) -> None:
+        self._client = client
 
     def add_node(self, node: str, command: str) -> None:
         """
@@ -17,15 +23,15 @@ class Network:
             ‘add’ to add a node to the list, ‘remove’ to remove a node from the list, ‘onetry’ to try a connection to
             the node once
         """
-        return self.__rpc.batch(["addnode", node, command])
+        self._client.call("addnode", node, command)
 
     def clear_banned(self) -> None:
         """
         Clear all banned IPs.
         """
-        return self.__rpc.batch(["clearbanned"])
+        self._client.call("clearbanned")
 
-    def disconnect_node(self, address=None, nodeid=None) -> None:
+    def disconnect_node(self, address: str | None = None, nodeid: int | None = None) -> None:
         """
         Immediately disconnects from the specified peer node.
         Strictly one out of ‘address’ and ‘nodeid’ can be provided to identify the node.
@@ -40,9 +46,9 @@ class Network:
         nodeid : int
             The node ID (see getpeerinfo for node IDs)
         """
-        return self.__rpc.batch(["disconnectnode", address, nodeid])
+        self._client.call("disconnectnode", address, nodeid)
 
-    def get_added_node_info(self, node=None) -> dict:
+    def get_added_node_info(self, node: str | None = None) -> dict[str, Any]:
         """
         Returns information about the given added node, or all added nodes (note that onetry addnodes are not listed
         here)
@@ -57,7 +63,7 @@ class Network:
         dict
              Information about the given added node.
         """
-        return self.__rpc.batch(["getaddednodeinfo", node])
+        return self._client.call("getaddednodeinfo", node)
 
     def get_connection_count(self) -> int:
         """
@@ -68,9 +74,9 @@ class Network:
         int
             The connection count
         """
-        return self.__rpc.batch(["getconnectioncount"])
+        return self._client.call("getconnectioncount")
 
-    def get_net_totals(self) -> dict:
+    def get_net_totals(self) -> dict[str, Any]:
         """
         Returns information about network traffic, including bytes in, bytes out, and current time.
 
@@ -79,9 +85,9 @@ class Network:
         dict
             Information about network traffic.
         """
-        return self.__rpc.batch(["getnettotals"])
+        return self._client.call("getnettotals")
 
-    def get_network_info(self) -> dict:
+    def get_network_info(self) -> dict[str, Any]:
         """
         Returns an object containing various state info regarding P2P networking.
 
@@ -90,9 +96,9 @@ class Network:
         dict
             Object containing various state info regarding P2P networking.
         """
-        return self.__rpc.batch(["getnetworkinfo"])
+        return self._client.call("getnetworkinfo")
 
-    def get_node_addresses(self, count=None) -> list:
+    def get_node_addresses(self, count: int | None = None) -> list[Any]:
         """
         Return known addresses which can potentially be used to find new nodes in the network.
 
@@ -106,9 +112,9 @@ class Network:
         list
             Addresses which can potentially be used to find new nodes in the network.
         """
-        return self.__rpc.batch(["getnodeaddresses", count])
+        return self._client.call("getnodeaddresses", count)
 
-    def get_peer_info(self) -> list:
+    def get_peer_info(self) -> list[Any]:
         """
         Returns data about each connected network node as a json array of objects.
 
@@ -117,9 +123,9 @@ class Network:
         list
             Data about each connected network node as a json array of objects.
         """
-        return self.__rpc.batch(["getpeerinfo"])
+        return self._client.call("getpeerinfo")
 
-    def list_banned(self) -> list:
+    def list_banned(self) -> list[Any]:
         """
         List all banned IPs/Subnets.
 
@@ -128,7 +134,7 @@ class Network:
         list
             List of all banned IPs/Subnets.
         """
-        return self.__rpc.batch(["listbanned"])
+        return self._client.call("listbanned")
 
     def ping(self) -> None:
         """
@@ -137,9 +143,9 @@ class Network:
         Ping command is handled in queue with all other commands, so it measures processing backlog, not just network
         ping.
         """
-        return self.__rpc.batch(["ping"])
+        self._client.call("ping")
 
-    def set_ban(self, subnet: str, command: str, bantime=None, absolute=None) -> None:
+    def set_ban(self, subnet: str, command: str, bantime: int | None = None, absolute: bool | None = None) -> None:
         """
         Attempts to add or remove an IP/Subnet from the banned list.
 
@@ -159,7 +165,7 @@ class Network:
         absolute : bool
             If set, the bantime must be an absolute timestamp in seconds since epoch (Jan 1 1970 GMT)
         """
-        return self.__rpc.batch(["setban", subnet, command, bantime, absolute])
+        self._client.call("setban", subnet, command, bantime, absolute)
 
     def set_network_active(self, state: bool) -> None:
         """
@@ -170,4 +176,4 @@ class Network:
         state : bool
             true to enable networking, false to disable
         """
-        return self.__rpc.batch(["setnetworkactive", state])
+        self._client.call("setnetworkactive", state)

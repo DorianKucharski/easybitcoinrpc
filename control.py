@@ -1,8 +1,14 @@
-class Control:
-    def __init__(self, rpc):
-        self.__rpc = rpc
+from __future__ import annotations
 
-    def get_memory_info(self, mode=None) -> dict:
+from typing import Any
+
+from easybitcoinrpc.client import JsonRpcClient
+
+class Control:
+    def __init__(self, client: JsonRpcClient) -> None:
+        self._client = client
+
+    def get_memory_info(self, mode: str | None = None) -> dict[str, Any]:
         """
         Returns an object containing information about memory usage.
 
@@ -19,9 +25,9 @@ class Control:
         dict
             Information about memory usage
         """
-        return self.__rpc.batch(["getmemoryinfo", mode])
+        return self._client.call("getmemoryinfo", mode)
 
-    def get_rpc_info(self) -> dict:
+    def get_rpc_info(self) -> dict[str, Any]:
         """
         Returns details of the RPC server.
 
@@ -30,9 +36,9 @@ class Control:
         dict
             Details of the RPC server
         """
-        return self.__rpc.batch(["getrpcinfo"])
+        return self._client.call("getrpcinfo")
 
-    def help(self, command=None) -> str:
+    def help(self, command: str | None = None) -> str:
         """
         List all commands, or get help for a specified command.
 
@@ -47,9 +53,9 @@ class Control:
         str
             The help text
         """
-        return self.__rpc.batch(["help", command])
+        return self._client.call("help", command)
 
-    def logging(self, include=None, exclude=None) -> dict:
+    def logging(self, include: dict[str, Any] | None = None, exclude: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         Gets and sets the logging configuration.
         When called without an argument, returns the list of categories with status that are currently being debug
@@ -76,13 +82,13 @@ class Control:
         dict
             Dict where keys are the logging categories, and values indicates its status
         """
-        return self.__rpc.batch(["logging", include, exclude])
+        return self._client.call("logging", include, exclude)
 
     def stop(self) -> None:
         """
         Stop Bitcoin server.
         """
-        return self.__rpc.batch(["stop"])
+        self._client.call("stop")
 
     def uptime(self) -> int:
         """
@@ -93,4 +99,4 @@ class Control:
         int
             The number of seconds that the server has been running
         """
-        return self.__rpc.batch(["uptime"])
+        return self._client.call("uptime")

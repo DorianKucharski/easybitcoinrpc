@@ -1,6 +1,12 @@
+from __future__ import annotations
+
+from typing import Any
+
+from easybitcoinrpc.client import JsonRpcClient
+
 class Wallet:
-    def __init__(self, rpc):
-        self.__rpc = rpc
+    def __init__(self, client: JsonRpcClient) -> None:
+        self._client = client
 
     def abandon_transaction(self, txid: str) -> None:
         """
@@ -14,15 +20,15 @@ class Wallet:
         txid : str
             The transaction id.
         """
-        return self.__rpc.batch(["abandontransaction", txid])
+        self._client.call("abandontransaction", txid)
 
     def abort_rescan(self) -> None:
         """
         Stops current wallet rescan triggered by an RPC call, e.g. by an importprivkey call.
         """
-        return self.__rpc.batch(["abortrescan"])
+        self._client.call("abortrescan")
 
-    def add_multi_sig_address(self, nrequired: int, keys: list, label=None, address_type=None) -> dict:
+    def add_multi_sig_address(self, nrequired: int, keys: list[Any], label: str | None = None, address_type: str | None = None) -> dict[str, Any]:
         """
         Add a nrequired-to-sign multisignature address to the wallet. Requires a new wallet backup. Each key is
         a Bitcoin address or hex-encoded public key. This functionality is only intended for use with non-watchonly
@@ -51,7 +57,7 @@ class Wallet:
             "redeemScript":"script"         (string) The string value of the hex-encoded redemption script.
             }
         """
-        return self.__rpc.batch(["addmultisigaddress", nrequired, keys, label, address_type])
+        return self._client.call("addmultisigaddress", nrequired, keys, label, address_type)
 
     def backup_wallet(self, destination: str) -> None:
         """
@@ -62,9 +68,9 @@ class Wallet:
         destination : str
             The destination directory or file
         """
-        return self.__rpc.batch(["backupwallet", destination])
+        self._client.call("backupwallet", destination)
 
-    def bump_fee(self, txid: str, options=None) -> dict:
+    def bump_fee(self, txid: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         Bumps the fee of an opt-in-RBF transaction T, replacing it with a new transaction B. An opt-in RBF transaction
         with the given txid must be in the wallet. The command will pay the additional fee by decreasing
@@ -111,9 +117,9 @@ class Wallet:
             "errors":  [ str... ] (json array of strings) Errors encountered during processing (may be empty)
             }
         """
-        return self.__rpc.batch(["bumpfee", txid, options])
+        return self._client.call("bumpfee", txid, options)
 
-    def create_wallet(self, wallet_name: str, disable_private_keys=None, blank=None) -> dict:
+    def create_wallet(self, wallet_name: str, disable_private_keys: bool | None = None, blank: bool | None = None) -> dict[str, Any]:
         """
         Creates and loads a new wallet.
 
@@ -137,7 +143,7 @@ class Wallet:
             "warning" : <warning>,          (string) Warning message if wallet was not loaded cleanly.
             }
         """
-        return self.__rpc.batch(["createwallet", wallet_name, disable_private_keys, blank])
+        return self._client.call("createwallet", wallet_name, disable_private_keys, blank)
 
     def dump_privkey(self, address: str) -> str:
         """
@@ -153,9 +159,9 @@ class Wallet:
         str
             The private key
         """
-        return self.__rpc.batch(["dumpprivkey", address])
+        return self._client.call("dumpprivkey", address)
 
-    def dump_wallet(self, filename: str) -> dict:
+    def dump_wallet(self, filename: str) -> dict[str, Any]:
         """
         Dumps all wallet keys in a human-readable format to a server-side file. This does not allow overwriting
         existing files. Imported scripts are included in the dumpfile, but corresponding BIP173 addresses, etc. may
@@ -175,7 +181,7 @@ class Wallet:
             "filename" :        (string) The filename with full absolute path
             }
         """
-        return self.__rpc.batch(["dumpwallet", filename])
+        return self._client.call("dumpwallet", filename)
 
     def encrypt_wallet(self, passphrase: str) -> None:
         """
@@ -189,9 +195,9 @@ class Wallet:
         passphrase : str
             The pass phrase to encrypt the wallet with. It must be at least 1 character, but should be long.
         """
-        return self.__rpc.batch(["encryptwallet", passphrase])
+        self._client.call("encryptwallet", passphrase)
 
-    def get_addresses_by_label(self, label: str) -> dict:
+    def get_addresses_by_label(self, label: str) -> dict[str, Any]:
         """
         Returns the list of addresses assigned the specified label.
 
@@ -211,9 +217,9 @@ class Wallet:
                 },...
             }
         """
-        return self.__rpc.batch(["getaddressesbylabel", label])
+        return self._client.call("getaddressesbylabel", label)
 
-    def get_address_info(self, address: str) -> dict:
+    def get_address_info(self, address: str) -> dict[str, Any]:
         """
         Return information about the given bitcoin address. Some information requires the address to be in the wallet.
 
@@ -275,9 +281,9 @@ class Wallet:
             ]
             }
         """
-        return self.__rpc.batch(["getaddressinfo", address])
+        return self._client.call("getaddressinfo", address)
 
-    def get_balance(self, dummy=None, minconf=None, include_watchonly=None) -> int:
+    def get_balance(self, dummy: str | None = None, minconf: int | None = None, include_watchonly: bool | None = None) -> int:
         """
         Returns the total available balance. The available balance is what the wallet considers currently spendable,
         and is thus affected by options which limit spendability such as -spendzeroconfchange.
@@ -298,9 +304,9 @@ class Wallet:
         int
             The total amount in BTC received for this wallet.
         """
-        return self.__rpc.batch(["getbalance", dummy, minconf, include_watchonly])
+        return self._client.call("getbalance", dummy, minconf, include_watchonly)
 
-    def get_new_address(self, label=None, address_type=None) -> str:
+    def get_new_address(self, label: str | None = None, address_type: str | None = None) -> str:
         """
         Returns a new Bitcoin address for receiving payments. If ‘label’ is specified, it is added to the address
         book so payments received with the address will be associated with ‘label’.
@@ -319,9 +325,9 @@ class Wallet:
         str
             The new bitcoin address.
         """
-        return self.__rpc.batch(["getnewaddress", label, address_type])
+        return self._client.call("getnewaddress", label, address_type)
 
-    def get_raw_change_address(self, address_type=None) -> str:
+    def get_raw_change_address(self, address_type: str | None = None) -> str:
         """
         Returns a new Bitcoin address, for receiving change. This is for use with raw transactions, NOT normal use.
 
@@ -335,9 +341,9 @@ class Wallet:
         str
             The address.
         """
-        return self.__rpc.batch(["getrawchangeaddress", address_type])
+        return self._client.call("getrawchangeaddress", address_type)
 
-    def get_received_by_address(self, address: str, minconf=None) -> int:
+    def get_received_by_address(self, address: str, minconf: int | None = None) -> int:
         """
         Returns the total amount received by the given address in transactions with at least minconf confirmations.
 
@@ -354,9 +360,9 @@ class Wallet:
         int
             The total amount in BTC received at this address.
         """
-        return self.__rpc.batch(["getreceivedbyaddress", address, minconf])
+        return self._client.call("getreceivedbyaddress", address, minconf)
 
-    def get_received_by_label(self, label: str, minconf=None) -> int:
+    def get_received_by_label(self, label: str, minconf: int | None = None) -> int:
         """
         Returns the total amount received by addresses with <label> in transactions with at least [minconf]
         confirmations.
@@ -374,9 +380,9 @@ class Wallet:
         int
             The total amount in BTC received for this label.
         """
-        return self.__rpc.batch(["getreceivedbylabel", label, minconf])
+        return self._client.call("getreceivedbylabel", label, minconf)
 
-    def get_transaction(self, txid: str, include_watchonly=None) -> dict:
+    def get_transaction(self, txid: str, include_watchonly: bool | None = None) -> dict[str, Any]:
         """
         Get detailed information about in-wallet transaction <txid>
 
@@ -428,7 +434,7 @@ class Wallet:
             "hex" : "data"         (string) Raw data for transaction
             }
         """
-        return self.__rpc.batch(["gettransaction", txid, include_watchonly])
+        return self._client.call("gettransaction", txid, include_watchonly)
 
     def get_unconfirmed_balance(self) -> int:
         """
@@ -439,9 +445,9 @@ class Wallet:
         int
             Server’s total unconfirmed balance.
         """
-        return self.__rpc.batch(["getunconfirmedbalance"])
+        return self._client.call("getunconfirmedbalance")
 
-    def get_wallet_info(self) -> dict:
+    def get_wallet_info(self) -> dict[str, Any]:
         """
         Returns an object containing various wallet state info
 
@@ -470,9 +476,9 @@ class Wallet:
                                                 watch-only wallet)
             }
         """
-        return self.__rpc.batch(["getwalletinfo"])
+        return self._client.call("getwalletinfo")
 
-    def import_address(self, address: str, label=None, rescan=None, p2sh=None) -> None:
+    def import_address(self, address: str, label: str | None = None, rescan: bool | None = None, p2sh: bool | None = None) -> None:
         """
         Adds an address or script (in hex) that can be watched as if it were in your wallet but cannot be used to spend.
         Requires a new wallet backup. Note: This call can take over an hour to complete if rescan is true, during that
@@ -496,9 +502,9 @@ class Wallet:
         p2sh : bool
             Add the P2SH version of the script as well
         """
-        return self.__rpc.batch(["importaddress", address, label, rescan, p2sh])
+        self._client.call("importaddress", address, label, rescan, p2sh)
 
-    def import_multi(self, requests: list, options=None) -> list:
+    def import_multi(self, requests: list[Any], options: Any | None = None) -> list[Any]:
         """
         Import addresses/scripts (with private or public keys, redeem script (P2SH)), optionally rescanning
         the blockchain from the earliest creation time of the imported scripts. Requires a new wallet backup.
@@ -565,9 +571,9 @@ class Wallet:
         list
             Response is an array with the same size as the input that has the execution result
         """
-        return self.__rpc.batch(["importmulti", requests, options])
+        return self._client.call("importmulti", requests, options)
 
-    def import_privkey(self, privkey: str, label=None, rescan=None) -> None:
+    def import_privkey(self, privkey: str, label: str | None = None, rescan: bool | None = None) -> None:
         """
         Adds a private key (as returned by dumpprivkey) to your wallet. Requires a new wallet backup.
         Hint: use importmulti to import more than one private key.
@@ -586,7 +592,7 @@ class Wallet:
         rescan : bool
             Rescan the wallet for transactions.
         """
-        return self.__rpc.batch(["importprivkey", privkey, label, rescan])
+        self._client.call("importprivkey", privkey, label, rescan)
 
     def import_pruned_funds(self, rawtransaction: str, txoutproof: str) -> None:
         """
@@ -602,9 +608,9 @@ class Wallet:
         txoutproof : str
             The hex output from gettxoutproof that contains the transaction.
         """
-        return self.__rpc.batch(["importprunedfunds", rawtransaction, txoutproof])
+        self._client.call("importprunedfunds", rawtransaction, txoutproof)
 
-    def import_pubkey(self, pubkey: str, label=None, rescan=None) -> None:
+    def import_pubkey(self, pubkey: str, label: str | None = None, rescan: bool | None = None) -> None:
         """
         Adds a public key (in hex) that can be watched as if it were in your wallet but cannot be used to spend.
         Requires a new wallet backup.
@@ -623,7 +629,7 @@ class Wallet:
         rescan : bool
             Rescan the wallet for transactions.
         """
-        return self.__rpc.batch(["importpubkey", pubkey, label, rescan])
+        self._client.call("importpubkey", pubkey, label, rescan)
 
     def import_wallet(self, filename: str) -> None:
         """
@@ -634,9 +640,9 @@ class Wallet:
         filename : str
             The wallet file.
         """
-        return self.__rpc.batch(["importwallet", filename])
+        self._client.call("importwallet", filename)
 
-    def keypool_refill(self, newsize=None) -> None:
+    def keypool_refill(self, newsize: int | None = None) -> None:
         """
         Fills the keypool.
 
@@ -645,9 +651,9 @@ class Wallet:
         newsize : int
             The new keypool size.
         """
-        return self.__rpc.batch(["keypoolrefill", newsize])
+        self._client.call("keypoolrefill", newsize)
 
-    def list_address_groupings(self) -> list:
+    def list_address_groupings(self) -> list[Any]:
         """
         Lists groups of addresses which have had their common ownership made public by common use as inputs or as
         the resulting change in past transactions
@@ -667,9 +673,9 @@ class Wallet:
                 ,...
             ]
         """
-        return self.__rpc.batch(["listaddressgroupings"])
+        return self._client.call("listaddressgroupings")
 
-    def list_labels(self, purpose=None) -> list:
+    def list_labels(self, purpose: str | None = None) -> list[Any]:
         """
         Returns the list of all labels, or labels that are assigned to addresses with a specific purpose.
 
@@ -687,9 +693,9 @@ class Wallet:
             ...
             ]
         """
-        return self.__rpc.batch(["listlabels", purpose])
+        return self._client.call("listlabels", purpose)
 
-    def list_lock_unspent(self) -> list:
+    def list_lock_unspent(self) -> list[Any]:
         """
         Returns list of temporarily unspendable outputs. See the lockunspent call to lock and unlock transactions
         for spending.
@@ -702,10 +708,10 @@ class Wallet:
             "vout" : n                      (numeric) The vout value
             },...]
         """
-        return self.__rpc.batch(["listlockunspent"])
+        return self._client.call("listlockunspent")
 
-    def list_received_by_address(self, minconf=None, include_empty=None, include_watchonly=None,
-                                 address_filter=None) -> list:
+    def list_received_by_address(self, minconf: int | None = None, include_empty: bool | None = None, include_watchonly: bool | None = None,
+                                 address_filter: str | None = None) -> list[Any]:
         """
         List balances by receiving address.
 
@@ -739,9 +745,9 @@ class Wallet:
                 ]
             },...]
         """
-        return self.__rpc.batch(["listreceivedbyaddress", minconf, include_empty, include_watchonly, address_filter])
+        return self._client.call("listreceivedbyaddress", minconf, include_empty, include_watchonly, address_filter)
 
-    def list_received_by_label(self, minconf=None, include_empty=None, include_watchonly=None) -> dict:
+    def list_received_by_label(self, minconf: int | None = None, include_empty: bool | None = None, include_watchonly: bool | None = None) -> dict[str, Any]:
         """
         List received transactions by label.
 
@@ -766,10 +772,10 @@ class Wallet:
             "label" : "label"           (string) The label of the receiving address. The default label is "".
             },...]
         """
-        return self.__rpc.batch(["listreceivedbylabel", minconf, include_empty, include_watchonly])
+        return self._client.call("listreceivedbylabel", minconf, include_empty, include_watchonly)
 
-    def list_since_block(self, blockhash=None, target_confirmations=None, include_watchonly=None,
-                         include_removed=None) -> dict:
+    def list_since_block(self, blockhash: str | None = None, target_confirmations: int | None = None, include_watchonly: bool | None = None,
+                         include_removed: bool | None = None) -> dict[str, Any]:
         """
         Get all transactions in blocks since block [blockhash], or all transactions if omitted. If “blockhash” is no
         longer a part of the main chain, transactions from the fork point onward are included. Additionally, if
@@ -837,9 +843,9 @@ class Wallet:
             transactions until they've reached 6 confirmations plus any new ones
             }
         """
-        return self.__rpc.batch(["listsinceblock", blockhash, target_confirmations, include_watchonly, include_removed])
+        return self._client.call("listsinceblock", blockhash, target_confirmations, include_watchonly, include_removed)
 
-    def list_transactions(self, label=None, count=None, skip=None, include_watchonly=None) -> list:
+    def list_transactions(self, label: str | None = None, count: int | None = None, skip: int | None = None, include_watchonly: bool | None = None) -> list[Any]:
         """
         If a label name is provided, this will return only incoming transactions paying to addresses with the specified
         label. Returns up to ‘count’ most recent transactions skipping the first ‘from’ transactions.
@@ -894,9 +900,9 @@ class Wallet:
                                             Only available for the 'send' category of transactions.
             }]
         """
-        return self.__rpc.batch(["listtransactions", label, count, skip, include_watchonly])
+        return self._client.call("listtransactions", label, count, skip, include_watchonly)
 
-    def list_unspent(self, minconf=None, maxconf=None, addresses=None, include_unsafe=None, query_options=None) -> list:
+    def list_unspent(self, minconf: int | None = None, maxconf: int | None = None, addresses: list[Any] | None = None, include_unsafe: bool | None = None, query_options: dict[str, Any] | None = None) -> list[Any]:
         """
         Returns array of unspent transaction outputs with between minconf and maxconf (inclusive) confirmations.
         Optionally filter to only include txouts paid to specified addresses.
@@ -947,9 +953,9 @@ class Wallet:
                                       and are not eligible for spending by fundrawtransaction and sendtoaddress.
             },...]
         """
-        return self.__rpc.batch(["listunspent", minconf, maxconf, addresses, include_unsafe, query_options])
+        return self._client.call("listunspent", minconf, maxconf, addresses, include_unsafe, query_options)
 
-    def list_wallet_dir(self) -> dict:
+    def list_wallet_dir(self) -> dict[str, Any]:
         """
         Returns a list of wallets in the wallet directory.
 
@@ -964,9 +970,9 @@ class Wallet:
                 ,...
             ]}
         """
-        return self.__rpc.batch(["listwalletdir"])
+        return self._client.call("listwalletdir")
 
-    def list_wallets(self) -> list:
+    def list_wallets(self) -> list[Any]:
         """
         Returns a list of currently loaded wallets. For full information on the wallet, use “getwalletinfo”
 
@@ -978,9 +984,9 @@ class Wallet:
             ...
             ]
         """
-        return self.__rpc.batch(["listwallets"])
+        return self._client.call("listwallets")
 
-    def load_wallet(self, filename: str) -> dict:
+    def load_wallet(self, filename: str) -> dict[str, Any]:
         """
         Loads a wallet from a wallet file or directory. Note that all wallet command-line options used when starting
         bitcoind will be applied to the new wallet (eg -zapwallettxes, upgradewallet, rescan, etc).
@@ -998,9 +1004,9 @@ class Wallet:
             "warning" : <warning>,            (string) Warning message if wallet was not loaded cleanly.
             }
         """
-        return self.__rpc.batch(["loadwallet", filename])
+        return self._client.call("loadwallet", filename)
 
-    def lock_unspent(self, unlock: bool, transactions=None) -> bool:
+    def lock_unspent(self, unlock: bool, transactions: list[Any] | None = None) -> bool:
         """
         Updates list of temporarily unspendable outputs. Temporarily lock (unlock=false) or unlock (unlock=true)
         specified transaction outputs. If no transaction outputs are specified when unlocking then all current locked
@@ -1028,7 +1034,7 @@ class Wallet:
         bool
             Whether the command was successful or not.
         """
-        return self.__rpc.batch(["lockunspent", unlock, transactions])
+        return self._client.call("lockunspent", unlock, transactions)
 
     def remove_pruned_funds(self, txid: str) -> None:
         """
@@ -1040,9 +1046,9 @@ class Wallet:
         txid : str
             The hex-encoded id of the transaction you are deleting.
         """
-        return self.__rpc.batch(["removeprunedfunds", txid])
+        self._client.call("removeprunedfunds", txid)
 
-    def rescan_blockchain(self, start_height=None, stop_height=None) -> dict:
+    def rescan_blockchain(self, start_height: int | None = None, stop_height: int | None = None) -> dict[str, Any]:
         """
         Rescan the local blockchain for wallet related transactions.
 
@@ -1065,10 +1071,10 @@ class Wallet:
                                     already scanned in the background.
             }
         """
-        return self.__rpc.batch(["rescanblockchain", start_height, stop_height])
+        return self._client.call("rescanblockchain", start_height, stop_height)
 
-    def send_many(self, dummy: str, amounts: dict, minconf=None, comment=None, subtractfeefrom=None, replaceable=None,
-                  conf_target=None, estimate_mode=None) -> str:
+    def send_many(self, dummy: str, amounts: dict[str, Any], minconf: int | None = None, comment: str | None = None, subtractfeefrom: list[Any] | None = None, replaceable: bool | None = None,
+                  conf_target: int | None = None, estimate_mode: str | None = None) -> str:
         """
         Send multiple times. Amounts are double-precision floating point numbers.
 
@@ -1113,12 +1119,12 @@ class Wallet:
         str
             The transaction id for the send. Only 1 transaction is created.
         """
-        return self.__rpc.batch(["sendmany", dummy, amounts, minconf, comment, subtractfeefrom, replaceable,
-                                 conf_target, estimate_mode])
+        return self._client.call("sendmany", dummy, amounts, minconf, comment, subtractfeefrom, replaceable,
+                                 conf_target, estimate_mode)
 
-    def send_to_address(self, address: str, amount: int or str, comment=None, comment_to=None,
-                        subtractfeefromamount=None,
-                        replaceable=None, conf_target=None, estimate_mode=None) -> str:
+    def send_to_address(self, address: str, amount: int | str, comment: str | None = None, comment_to: str | None = None,
+                        subtractfeefromamount: bool | None = None,
+                        replaceable: bool | None = None, conf_target: int | None = None, estimate_mode: str | None = None) -> str:
         """
         Send an amount to a given address.
 
@@ -1127,7 +1133,7 @@ class Wallet:
         address : str
             The bitcoin address to send to.
 
-        amount : int or str
+        amount : int | str
             The amount in BTC to send. eg 0.1
 
         comment : str
@@ -1156,10 +1162,10 @@ class Wallet:
         str
             The transaction id.
         """
-        return self.__rpc.batch(["sendtoaddress", address, amount, comment, comment_to, subtractfeefromamount,
-                                 replaceable, conf_target, estimate_mode])
+        return self._client.call("sendtoaddress", address, amount, comment, comment_to, subtractfeefromamount,
+                                 replaceable, conf_target, estimate_mode)
 
-    def set_hd_seed(self, newkeypool=None, seed=None) -> None:
+    def set_hd_seed(self, newkeypool: bool | None = None, seed: str | None = None) -> None:
         """
         Set or generate a new HD wallet seed. Non-HD wallets will not be upgraded to being a HD wallet. Wallets that
         are already HD will have a new HD seed set so that new keys added to the keypool will be derived from this
@@ -1177,7 +1183,7 @@ class Wallet:
             The WIF private key to use as the new HD seed.
             The seed value can be retrieved using the dumpwallet command. It is the private key marked hdseed=1
         """
-        return self.__rpc.batch(["sethdseed", newkeypool, seed])
+        self._client.call("sethdseed", newkeypool, seed)
 
     def set_label(self, address: str, label: str) -> None:
         """
@@ -1191,15 +1197,15 @@ class Wallet:
         label : str
             The label to assign to the address.
         """
-        return self.__rpc.batch(["setlabel", address, label])
+        self._client.call("setlabel", address, label)
 
-    def set_tx_fee(self, amount: int or str) -> bool:
+    def set_tx_fee(self, amount: int | str) -> bool:
         """
         Set the transaction fee per kB for this wallet. Overrides the global -paytxfee command line parameter.
 
         Parameters
         -------
-        amount : int or str
+        amount : int | str
             The transaction fee in BTC/kB.
 
         Returns
@@ -1207,7 +1213,7 @@ class Wallet:
         bool
             Returns true if successful
         """
-        return self.__rpc.batch(["settxfee", amount])
+        return self._client.call("settxfee", amount)
 
     def sign_message(self, address: str, message: str) -> str:
         """
@@ -1226,9 +1232,9 @@ class Wallet:
         str
             The signature of the message encoded in base 64.
         """
-        return self.__rpc.batch(["signmessage", address, message])
+        return self._client.call("signmessage", address, message)
 
-    def sign_raw_transaction_with_wallet(self, hexstring: str, prevtxs=None, sighashtype=None) -> dict:
+    def sign_raw_transaction_with_wallet(self, hexstring: str, prevtxs: list[Any] | None = None, sighashtype: str | None = None) -> dict[str, Any]:
         """
         Sign inputs for raw transaction (serialized, hex-encoded). The second optional argument (may be null) is an
         array of previous transaction outputs that this transaction depends on but may not yet be in the block chain.
@@ -1268,9 +1274,9 @@ class Wallet:
                 }
             ,...]}
         """
-        return self.__rpc.batch(["signrawtransactionwithwallet", hexstring, prevtxs, sighashtype])
+        return self._client.call("signrawtransactionwithwallet", hexstring, prevtxs, sighashtype)
 
-    def unload_wallet(self, wallet_name=None) -> None:
+    def unload_wallet(self, wallet_name: str | None = None) -> None:
         """
         Unloads the wallet referenced by the request endpoint otherwise unloads the wallet specified in the argument.
         Specifying the wallet name on a wallet endpoint is invalid.
@@ -1280,10 +1286,10 @@ class Wallet:
         wallet_name : str
             The name of the wallet to unload.
         """
-        return self.__rpc.batch(["unloadwallet", wallet_name])
+        self._client.call("unloadwallet", wallet_name)
 
-    def wallet_create_funded_psbt(self, inputs: list, outputs: list, locktime=None, options=None,
-                                  bip32derivs=None) -> dict:
+    def wallet_create_funded_psbt(self, inputs: list[Any], outputs: list[Any], locktime: int | None = None, options: dict[str, Any] | None = None,
+                                  bip32derivs: bool | None = None) -> dict[str, Any]:
         """
         Creates and funds a transaction in the Partially Signed Transaction format. Inputs will be added if supplied
         inputs are not enough Implements the Creator and Updater roles.
@@ -1353,14 +1359,14 @@ class Wallet:
             "changepos": n          (numeric) The position of the added change output, or -1
             }
         """
-        return self.__rpc.batch(["walletcreatefundedpsbt", inputs, outputs, locktime, options, bip32derivs])
+        return self._client.call("walletcreatefundedpsbt", inputs, outputs, locktime, options, bip32derivs)
 
     def wallet_lock(self) -> None:
         """
         Removes the wallet encryption key from memory, locking the wallet. After calling this method, you will need
         to call walletpassphrase again before being able to call any methods which require the wallet to be unlocked.
         """
-        return self.__rpc.batch(["walletlock"])
+        self._client.call("walletlock")
 
     def wallet_passphrase(self, passphrase: str, timeout: int) -> None:
         """
@@ -1377,7 +1383,7 @@ class Wallet:
         timeout : int
             The time to keep the decryption key in seconds; capped at 100000000 (~3 years).
         """
-        return self.__rpc.batch(["walletpassphrase", passphrase, timeout])
+        self._client.call("walletpassphrase", passphrase, timeout)
 
     def wallet_passphrase_change(self, oldpassphrase: str, newpassphrase: str) -> None:
         """
@@ -1391,9 +1397,9 @@ class Wallet:
         newpassphrase : str
             The new passphrase.
         """
-        return self.__rpc.batch(["walletpassphrasechange", oldpassphrase, newpassphrase])
+        self._client.call("walletpassphrasechange", oldpassphrase, newpassphrase)
 
-    def wallet_process_psbt(self, psbt: str, sign=None, sighashtype=None, bip32derivs=None) -> dict:
+    def wallet_process_psbt(self, psbt: str, sign: bool | None = None, sighashtype: str | None = None, bip32derivs: bool | None = None) -> dict[str, Any]:
         """
         Update a PSBT with input information from our wallet and then sign inputs that we can sign for.
 
@@ -1420,4 +1426,4 @@ class Wallet:
             "complete" : true|false,   (boolean) If the transaction has a complete set of signatures
             }
         """
-        return self.__rpc.batch(["walletprocesspsbt", psbt, sign, sighashtype, bip32derivs])
+        return self._client.call("walletprocesspsbt", psbt, sign, sighashtype, bip32derivs)
