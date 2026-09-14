@@ -1,8 +1,14 @@
-class Util:
-    def __init__(self, rpc):
-        self.__rpc = rpc
+from __future__ import annotations
 
-    def create_multisig(self, nrequired: int, keys: list, address_type=None) -> dict:
+from typing import Any
+
+from easybitcoinrpc.client import JsonRpcClient
+
+class Util:
+    def __init__(self, client: JsonRpcClient) -> None:
+        self._client = client
+
+    def create_multisig(self, nrequired: int, keys: list[Any], address_type: str | None = None) -> dict[str, Any]:
         """
         Creates a multi-signature address with n signature of m keys required.
         It returns a json object with the address and redeemScript.
@@ -23,9 +29,9 @@ class Util:
         dict
             Object with wultisig address and script
         """
-        return self.__rpc.batch(["createmultisig", nrequired, keys, address_type])
+        return self._client.call("createmultisig", nrequired, keys, address_type)
 
-    def derive_addresses(self, descriptor: str, range=None) -> list:
+    def derive_addresses(self, descriptor: str, range: list[Any] | None = None) -> list[Any]:
         """
         Derives one or more addresses corresponding to an output descriptor.
         Examples of output descriptors are:
@@ -51,9 +57,9 @@ class Util:
         list
             The derived addresses
         """
-        return self.__rpc.batch(["deriveaddresses", descriptor, range])
+        return self._client.call("deriveaddresses", descriptor, range)
 
-    def estimate_smart_fee(self, conf_target: int, estimate_mode=None) -> dict:
+    def estimate_smart_fee(self, conf_target: int, estimate_mode: str | None = None) -> dict[str, Any]:
         """
         Estimates the approximate fee per kilobyte needed for a transaction to begin confirmation within conf_target
         blocks if possible and return the number of blocks for which the estimate is valid. Uses virtual transaction
@@ -75,9 +81,9 @@ class Util:
         dict
             Object with feerate, errors and blocks.
         """
-        return self.__rpc.batch(["estimatesmartfee", conf_target, estimate_mode])
+        return self._client.call("estimatesmartfee", conf_target, estimate_mode)
 
-    def get_descriptor_info(self, descriptor: str) -> dict:
+    def get_descriptor_info(self, descriptor: str) -> dict[str, Any]:
         """
         Analyses a descriptor.
 
@@ -96,7 +102,7 @@ class Util:
             "hasprivatekeys" : true|false, (boolean) Whether the input descriptor contained at least one private key
             }
         """
-        return self.__rpc.batch(["getdescriptorinfo", descriptor])
+        return self._client.call("getdescriptorinfo", descriptor)
 
     def sign_message_with_privkey(self, privkey: str, message: str) -> str:
         """
@@ -115,9 +121,9 @@ class Util:
         str
             The signature of the message encoded in base 64.
         """
-        return self.__rpc.batch(["signmessagewithprivkey", privkey, message])
+        return self._client.call("signmessagewithprivkey", privkey, message)
 
-    def validate_address(self, address: str) -> dict:
+    def validate_address(self, address: str) -> dict[str, Any]:
         """
         Return information about the given bitcoin address.
 
@@ -140,7 +146,7 @@ class Util:
             }
 
         """
-        return self.__rpc.batch(["validateaddress", address])
+        return self._client.call("validateaddress", address)
 
     def verify_message(self, address: str, signature: str, message: str) -> bool:
         """
@@ -162,4 +168,4 @@ class Util:
         bool
             The message that was signed.
         """
-        return self.__rpc.batch(["verifymessage", address, signature, message])
+        return self._client.call("verifymessage", address, signature, message)

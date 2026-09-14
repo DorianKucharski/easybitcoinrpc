@@ -1,2 +1,63 @@
+from __future__ import annotations
+
+from easybitcoinrpc.client import JsonRpcClient, NodeEndpoint, RpcCall
+from easybitcoinrpc.errors import (
+    AuthenticationError,
+    EasyBitcoinRpcError,
+    InsufficientFundsError,
+    InvalidParameterError,
+    MalformedResponseError,
+    MethodNotFoundError,
+    NodeWarmingUpError,
+    RpcError,
+    RpcErrorCode,
+    TransportError,
+    VerbosityNotSupportedError,
+    WalletError,
+    WalletNotFoundError,
+    WalletPassphraseIncorrectError,
+    WalletUnlockNeededError,
+)
+from easybitcoinrpc.models import (
+    AddressAmount,
+    Block,
+    OutPoint,
+    ScriptPubKey,
+    ScriptSig,
+    Transaction,
+    TransactionSummary,
+    Vin,
+    Vout,
+)
 from easybitcoinrpc.rpc import RPC
-from easybitcoinrpc.data import Block, Transaction, TransactionSummary
+
+__all__ = [
+    "RPC",
+    "JsonRpcClient",
+    "NodeEndpoint",
+    "RpcCall",
+    "AddressAmount",
+    "Block",
+    "OutPoint",
+    "ScriptPubKey",
+    "ScriptSig",
+    "Transaction",
+    "TransactionSummary",
+    "Vin",
+    "Vout",
+    "AuthenticationError",
+    "EasyBitcoinRpcError",
+    "InsufficientFundsError",
+    "InvalidParameterError",
+    "MalformedResponseError",
+    "MethodNotFoundError",
+    "NodeWarmingUpError",
+    "RpcError",
+    "RpcErrorCode",
+    "TransportError",
+    "VerbosityNotSupportedError",
+    "WalletError",
+    "WalletNotFoundError",
+    "WalletPassphraseIncorrectError",
+    "WalletUnlockNeededError",
+]

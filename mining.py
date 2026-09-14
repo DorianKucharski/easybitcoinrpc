@@ -1,8 +1,14 @@
-class Mining:
-    def __init__(self, rpc):
-        self.__rpc = rpc
+from __future__ import annotations
 
-    def get_block_template(self, template_request=None) -> dict:
+from typing import Any
+
+from easybitcoinrpc.client import JsonRpcClient
+
+class Mining:
+    def __init__(self, client: JsonRpcClient) -> None:
+        self._client = client
+
+    def get_block_template(self, template_request: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         If the request parameters include a ‘mode’ key, that is used to explicitly select between the default
         ‘template’ request or a ‘proposal’.
@@ -21,9 +27,9 @@ class Mining:
         dict
             Data needed to construct a block to work on.
         """
-        return self.__rpc.batch(["getblocktemplate", template_request])
+        return self._client.call("getblocktemplate", template_request)
 
-    def get_mining_info(self) -> dict:
+    def get_mining_info(self) -> dict[str, Any]:
         """
         Returns a json object containing mining-related information.
 
@@ -32,9 +38,9 @@ class Mining:
         dict
             Dining-related information
         """
-        return self.__rpc.batch(["getmininginfo"])
+        return self._client.call("getmininginfo")
 
-    def get_network_hash_ps(self, nblocks=None, height=None) -> int:
+    def get_network_hash_ps(self, nblocks: int | None = None, height: int | None = None) -> int:
         """
         Returns the estimated network hashes per second based on the last n blocks.
         Pass in [blocks] to override # of blocks, -1 specifies since last difficulty change.
@@ -53,9 +59,9 @@ class Mining:
         int
             Hashes per second estimated.
         """
-        return self.__rpc.batch(["getnetworkhashps", nblocks, height])
+        return self._client.call("getnetworkhashps", nblocks, height)
 
-    def prioritise_transaction(self, txid: str, dummy=None, fee_delta=None) -> bool:
+    def prioritise_transaction(self, txid: str, dummy: str | None = None, fee_delta: int | None = None) -> bool:
         """
         Accepts the transaction into mined blocks at a higher (or lower) priority
 
@@ -79,9 +85,9 @@ class Mining:
         bool
             Returns true
         """
-        return self.__rpc.batch(["prioritisetransaction", txid, dummy, fee_delta])
+        return self._client.call("prioritisetransaction", txid, dummy, fee_delta)
 
-    def submit_block(self, hexdata: str, dummy=None) -> None:
+    def submit_block(self, hexdata: str, dummy: str | None = None) -> None:
         """
         Attempts to submit new block to network.
 
@@ -94,7 +100,7 @@ class Mining:
             Dummy value, for compatibility with BIP22. This value is ignored..
 
         """
-        return self.__rpc.batch(["submitblock", hexdata, dummy])
+        self._client.call("submitblock", hexdata, dummy)
 
     def submit_header(self, hexdata: str) -> None:
         """
@@ -107,4 +113,4 @@ class Mining:
             The hex-encoded block header data.
 
         """
-        return self.__rpc.batch(["submitheader", hexdata])
+        self._client.call("submitheader", hexdata)

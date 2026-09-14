@@ -1,8 +1,12 @@
-from easybitcoinrpc.data import Block, Transaction
-from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
+from __future__ import annotations
 
+from typing import Any, Literal, overload
 
-def verbosity_argument(verbosity):
+from easybitcoinrpc.client import JsonRpcClient, RpcCall
+from easybitcoinrpc.errors import RpcError, VerbosityNotSupportedError
+from easybitcoinrpc.models import Block, Transaction
+
+def verbosity_argument(verbosity: int | bool | None) -> bool | int | None:
     """
     Translates a verbosity level into the argument getblock expects.
 
@@ -22,7 +26,7 @@ def verbosity_argument(verbosity):
     bool or int or None
         The argument to pass to getblock
     """
-    if verbosity is None or type(verbosity) == bool:
+    if verbosity is None or isinstance(verbosity, bool):
         return verbosity
     if verbosity == 0:
         return False
@@ -31,36 +35,28 @@ def verbosity_argument(verbosity):
     return verbosity
 
 
-def unsupported_verbosity(error, verbosity):
-    """
-    Replaces the error a node without verbosity support raises with an explanatory one.
-
-    Parameters
-    -------
-    error : JSONRPCException
-        The error raised by the node
-
-    verbosity : int or bool or None
-        The requested verbosity level
-
-    Returns
-    -------
-    JSONRPCException
-        The error to raise
-    """
-    if type(verbosity) != bool and verbosity is not None and verbosity > 1 \
-            and "boolean" in str(error):
-        return JSONRPCException({
-            "code": -1,
-            "message": "verbosity %s requires Bitcoin Core 0.15 or newer, "
-                       "this node only supports verbosity 0 and 1" % verbosity
-        })
-    return error
+def _node_lacks_verbosity(error: RpcError, verbosity: int | bool | None) -> bool:
+    requested_more_than_a_boolean = (
+        not isinstance(verbosity, bool) and verbosity is not None and verbosity > 1
+    )
+    return requested_more_than_a_boolean and "boolean" in error.message
 
 
 class Blockchain:
-    def __init__(self, rpc: AuthServiceProxy):
-        self.__rpc = rpc
+    def __init__(self, client: JsonRpcClient) -> None:
+        self._client = client
+
+    def resolve_block_hash(self, height_or_hash: int | str) -> str:
+        if isinstance(height_or_hash, int):
+            return self._client.call("getblockhash", height_or_hash)
+        return height_or_hash
+
+    def get_blocks(self, heights_or_hashes: list[int | str]) -> list[Block]:
+        hashes = [self.resolve_block_hash(each) for each in heights_or_hashes]
+        payloads = self._client.batch(
+            *(RpcCall.of("getblock", block_hash, True) for block_hash in hashes)
+        )
+        return [Block.from_rpc(payload) for payload in payloads]
 
     def get_best_block_hash(self) -> str:
         """
@@ -71,7 +67,7 @@ class Blockchain:
         str
             The block hash, hex-encoded
         """
-        return self.__rpc.batch(["getbestblockhash"])
+        return self._client.call("getbestblockhash")
 
     def get_best_block(self) -> Block:
         """
@@ -82,18 +78,25 @@ class Blockchain:
         Block
             The block object
         """
-        best_block_hash = self.__rpc.batch(["getbestblockhash"])
-        result = self.__rpc.batch(["getblock", best_block_hash])
-        return Block(self.__rpc, result)
+        best_block_hash = self._client.call("getbestblockhash")
+        return Block.from_rpc(self._client.call("getblock", best_block_hash, True))
 
-    def get_block(self, height_or_hash: int or str, verbosity=1) -> Block:
+    @overload
+    def get_block(self, height_or_hash: int | str, verbosity: Literal[0]) -> str: ...
+
+    @overload
+    def get_block(
+        self, height_or_hash: int | str, verbosity: Literal[1, 2] | None = 1
+    ) -> Block: ...
+
+    def get_block(self, height_or_hash: int | str, verbosity: int | None = 1) -> Block | str:
         """
         If verbosity is 1, returns an Block object.
         If verbosity is 2, returns an Block object with information about each transaction.
 
         Parameters
         -------
-        height_or_hash : int or str
+        height_or_hash : int | str
             Block height or hash
 
         verbosity : int
@@ -104,26 +107,22 @@ class Blockchain:
         Block
             The block object
         """
-        if type(height_or_hash) == int:
-            height_or_hash = self.__rpc.batch(["getblockhash", height_or_hash])
+        block_hash = self.resolve_block_hash(height_or_hash)
         try:
-            block = self.__rpc.batch(["getblock", height_or_hash, verbosity_argument(verbosity)])
-        except JSONRPCException as error:
-            raise unsupported_verbosity(error, verbosity)
-        if verbosity is None or verbosity == 1:
-            return Block(self.__rpc, block)
-        elif verbosity == 2:
-            return Block(self.__rpc, block, [Transaction(self.__rpc, tx) for tx in block['tx']])
-        else:
-            return block
+            block = self._client.call("getblock", block_hash, verbosity_argument(verbosity))
+        except RpcError as error:
+            if verbosity is not None and _node_lacks_verbosity(error, verbosity):
+                raise VerbosityNotSupportedError(int(verbosity)) from error
+            raise
+        return block if verbosity == 0 else Block.from_rpc(block)
 
-    def get_block_hex(self, height_or_hash: int or str) -> str:
+    def get_block_hex(self, height_or_hash: int | str) -> str:
         """
         Returns a string that is serialized, hex-encoded data for block.
 
         Parameters
         -------
-        height_or_hash : int or str
+        height_or_hash : int | str
             Block height or block hash
 
         Returns
@@ -131,11 +130,9 @@ class Blockchain:
         str
             The block data
         """
-        if type(height_or_hash) == int:
-            height_or_hash = self.__rpc.batch(["getblockhash", height_or_hash])
-        return self.__rpc.batch(["getblock", height_or_hash, False])
+        return self._client.call("getblock", self.resolve_block_hash(height_or_hash), False)
 
-    def get_blockchain_info(self) -> dict:
+    def get_blockchain_info(self) -> dict[str, Any]:
         """
         Returns an object containing various state info regarding blockchain processing.
 
@@ -196,7 +193,7 @@ class Blockchain:
             "warnings" : "...",           (string) any network and blockchain warnings.
             }
         """
-        return self.__rpc.batch(["getblockchaininfo"])
+        return self._client.call("getblockchaininfo")
 
     def get_block_count(self) -> int:
         """
@@ -207,7 +204,7 @@ class Blockchain:
         int
             The current block count
         """
-        return self.__rpc.batch(["getblockcount"])
+        return self._client.call("getblockcount")
 
     def get_block_hash(self, height: int) -> str:
         """
@@ -223,16 +220,16 @@ class Blockchain:
         str
             The block hash
         """
-        return self.__rpc.batch(["getblockhash", height])
+        return self._client.call("getblockhash", height)
 
-    def get_block_header(self, height_or_hash: int or str, verbose=True) -> dict:
+    def get_block_header(self, height_or_hash: int | str, verbose: bool = True) -> dict[str, Any]:
         """
         If verbose is false, returns a string that is serialized, hex-encoded data for blockheader ‘hash’.
         If verbose is true, returns an Object with information about blockheader ‘hash’.
 
         Parameters
         -------
-        height_or_hash : int or str
+        height_or_hash : int | str
             The block height or hash
 
         verbose : int
@@ -261,11 +258,11 @@ class Blockchain:
             "nextblockhash" : "hash",      (string) The hash of the next block
             }
         """
-        if type(height_or_hash) == int:
-            height_or_hash = self.__rpc.batch(["getblockhash", height_or_hash])
-        return self.__rpc.batch(["getblockheader", height_or_hash, verbose])
+        if isinstance(height_or_hash, int):
+            height_or_hash = self._client.call("getblockhash", height_or_hash)
+        return self._client.call("getblockheader", height_or_hash, verbose)
 
-    def get_block_stats(self, height_or_hash: int or str, stats=None) -> dict:
+    def get_block_stats(self, height_or_hash: int | str, stats: list[Any] | None = None) -> dict[str, Any]:
         """
         Compute per block statistics for a given window. All amounts are in satoshis.
         It won’t work for some heights with pruning.
@@ -273,7 +270,7 @@ class Blockchain:
 
         Parameters
         -------
-        height_or_hash : int or str
+        height_or_hash : int | str
             The block height or hash
 
         stats : list
@@ -325,9 +322,9 @@ class Blockchain:
                                         op_return and similar)
             }
         """
-        return self.__rpc.batch(["getblockstats", height_or_hash, stats])
+        return self._client.call("getblockstats", height_or_hash, stats)
 
-    def get_chain_tips(self) -> list:
+    def get_chain_tips(self) -> list[Any]:
         """
         Return information about all known tips in the block tree, including the main chain as well as orphaned
         branches.
@@ -350,9 +347,9 @@ class Blockchain:
                                         invalid)
             }]
         """
-        return self.__rpc.batch(["getchaintips"])
+        return self._client.call("getchaintips")
 
-    def get_chain_tx_stats(self, nblocks=None, blockhash=None) -> dict:
+    def get_chain_tx_stats(self, nblocks: int | None = None, blockhash: str | None = None) -> dict[str, Any]:
         """
         Compute statistics about the total number and rate of transactions in the chain.
 
@@ -385,7 +382,7 @@ class Blockchain:
                                                         Only returned if "window_interval" is > 0.
             }
         """
-        return self.__rpc.batch(["getchaintxstats", nblocks, blockhash])
+        return self._client.call("getchaintxstats", nblocks, blockhash)
 
     def get_difficulty(self) -> int:
         """
@@ -396,9 +393,9 @@ class Blockchain:
         int
             The proof-of-work difficulty as a multiple of the minimum difficulty.
         """
-        return self.__rpc.batch(["getdifficulty"])
+        return self._client.call("getdifficulty")
 
-    def get_mempool_ancestors(self, txid: str, verbose=False) -> dict:
+    def get_mempool_ancestors(self, txid: str, verbose: bool = False) -> dict[str, Any]:
         """
         If txid is in the mempool, returns all in-mempool ancestors.
 
@@ -415,9 +412,9 @@ class Blockchain:
         dict
             Txid in-mempool ancestors
         """
-        return self.__rpc.batch(["getmempoolancestors", txid, verbose])
+        return self._client.call("getmempoolancestors", txid, verbose)
 
-    def get_mempool_descendants(self, txid: str, verbose=None) -> dict:
+    def get_mempool_descendants(self, txid: str, verbose: bool | None = None) -> dict[str, Any]:
         """
         If txid is in the mempool, returns all in-mempool descendants.
 
@@ -434,9 +431,9 @@ class Blockchain:
         dict
             Txid in-mempool descendants
         """
-        return self.__rpc.batch(["getmempooldescendants", txid, verbose])
+        return self._client.call("getmempooldescendants", txid, verbose)
 
-    def get_mempool_entry(self, txid: str) -> dict:
+    def get_mempool_entry(self, txid: str) -> dict[str, Any]:
         """
         Returns mempool data for given transaction.
 
@@ -450,9 +447,9 @@ class Blockchain:
         dict
             Txid mempool data
         """
-        return self.__rpc.batch(["getmempoolentry", txid])
+        return self._client.call("getmempoolentry", txid)
 
-    def get_mempool_info(self) -> dict:
+    def get_mempool_info(self) -> dict[str, Any]:
         """
         Returns details on the active state of the TX memory pool.
 
@@ -461,9 +458,9 @@ class Blockchain:
         dict
             The mempool info
         """
-        return self.__rpc.batch(["getmempoolinfo"])
+        return self._client.call("getmempoolinfo")
 
-    def get_raw_mempool(self, verbose=None) -> dict:
+    def get_raw_mempool(self, verbose: bool | None = None) -> dict[str, Any]:
         """
         Returns all transaction ids in memory pool as a json array of string transaction ids.
         Hint: use getmempoolentry to fetch a specific transaction from the mempool.
@@ -478,9 +475,9 @@ class Blockchain:
         dict
             All transaction ids in mempool
         """
-        return self.__rpc.batch(["getrawmempool", verbose])
+        return self._client.call("getrawmempool", verbose)
 
-    def get_tx_out(self, txid: str, n: int, include_mempool=None) -> dict:
+    def get_tx_out(self, txid: str, n: int, include_mempool: bool | None = None) -> dict[str, Any]:
         """
         Returns details about an unspent transaction output.
 
@@ -500,9 +497,9 @@ class Blockchain:
         dict
             Details about an unspent transaction output
         """
-        return self.__rpc.batch(["gettxout", txid, n, include_mempool])
+        return self._client.call("gettxout", txid, n, include_mempool)
 
-    def get_tx_out_proof(self, txids: list, blockhash=None) -> str:
+    def get_tx_out_proof(self, txids: list[Any], blockhash: str | None = None) -> str:
         """
         Returns a hex-encoded proof that “txid” was included in a block.
 
@@ -523,9 +520,9 @@ class Blockchain:
         str
             A string that is a serialized, hex-encoded data for the proof.
         """
-        return self.__rpc.batch(["gettxoutproof", txids, blockhash])
+        return self._client.call("gettxoutproof", txids, blockhash)
 
-    def get_tx_out_set_info(self) -> dict:
+    def get_tx_out_set_info(self) -> dict[str, Any]:
         """
         Returns statistics about the unspent transaction output set. Note this call may take some time.
 
@@ -534,7 +531,7 @@ class Blockchain:
         dict
             Statistics about the unspent transaction output set.
         """
-        return self.__rpc.batch(["gettxoutsetinfo"])
+        return self._client.call("gettxoutsetinfo")
 
     def precious_block(self, blockhash: str) -> None:
         """
@@ -548,7 +545,7 @@ class Blockchain:
             the hash of the block to mark as precious
 
         """
-        return self.__rpc.batch(["preciousblock", blockhash])
+        self._client.call("preciousblock", blockhash)
 
     def prune_blockchain(self, height: int) -> int:
         """
@@ -565,15 +562,15 @@ class Blockchain:
         int
             Height of the last block pruned.
         """
-        return self.__rpc.batch(["pruneblockchain", height])
+        return self._client.call("pruneblockchain", height)
 
     def save_mempool(self) -> None:
         """
         Dumps the mempool to disk. It will fail until the previous dump is fully loaded.
         """
-        return self.__rpc.batch(["savemempool"])
+        self._client.call("savemempool")
 
-    def scan_tx_out_set(self, action: str, scanobjects: list) -> dict:
+    def scan_tx_out_set(self, action: str, scanobjects: list[Any]) -> dict[str, Any]:
         """
         XPERIMENTAL warning: this call may be removed or changed in future releases.
         Scans the unspent transaction output set for entries that match certain output descriptors.
@@ -594,9 +591,9 @@ class Blockchain:
         dict
             Unspents
         """
-        return self.__rpc.batch(["scantxoutset", action, scanobjects])
+        return self._client.call("scantxoutset", action, scanobjects)
 
-    def verify_chain(self, checklevel=None, nblocks=None) -> bool:
+    def verify_chain(self, checklevel: int | None = None, nblocks: Any | None = None) -> bool:
         """
         Verifies blockchain database.
 
@@ -613,9 +610,9 @@ class Blockchain:
         bool
             Verified or not
         """
-        return self.__rpc.batch(["verifychain", checklevel, nblocks])
+        return self._client.call("verifychain", checklevel, nblocks)
 
-    def verify_tx_out_proof(self, proof: str) -> list:
+    def verify_tx_out_proof(self, proof: str) -> list[Any]:
         """
         Verifies that a proof points to a transaction in a block, returning the transaction it commits to and throwing
         an RPC error if the block is not in our best chain.
@@ -630,4 +627,4 @@ class Blockchain:
         list
             List of txids, which the proof commits to, or empty array if the proof can not be validated
         """
-        return self.__rpc.batch(["verifytxoutproof", proof])
+        return self._client.call("verifytxoutproof", proof)

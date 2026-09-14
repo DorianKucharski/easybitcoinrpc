@@ -4,18 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "easybitcoinrpc"
-version = "1.1.1"
+version = "2.0.0"
 description = "Simple and easy to use library for Bitcoin RPC"
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [{ name = "Dorian Kucharski", email = "dorian.kucharski1@gmail.com" }]
 dependencies = [
-    "python-bitcoinrpc",
-    "cryptocompare",
+    "requests>=2.28",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
@@ -27,18 +31,38 @@ Homepage = "https://github.com/DorianKucharski/easybitcoinrpc"
 # published package, which only declares the dependencies above.
 [dependency-groups]
 dev = [
-    "pytest",
+    "mypy",
     "build",
     "twine",
 ]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
 
 # The package modules live in the repository root, so the root is mapped onto the
 # easybitcoinrpc package instead of being scanned for sub-packages.
 [tool.setuptools]
 packages = ["easybitcoinrpc"]
+
+[tool.setuptools.package-data]
+easybitcoinrpc = ["py.typed"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["."]
+exclude = "^(tests|build)/"
+
+[[tool.mypy.overrides]]
+module = [
+    "easybitcoinrpc.blockchain",
+    "easybitcoinrpc.control",
+    "easybitcoinrpc.generating",
+    "easybitcoinrpc.mining",
+    "easybitcoinrpc.network",
+    "easybitcoinrpc.raw_transactions",
+    "easybitcoinrpc.util",
+    "easybitcoinrpc.wallet",
+]
+warn_return_any = false
 
 [tool.setuptools.package-dir]
 easybitcoinrpc = "."
